@@ -1,28 +1,29 @@
 import React, { useState, useReducer } from 'react';
 import './game.css';
 
-function boardReducerFunction(state, action) {
-  switch (action.type) {
-    case 'clicked_tile' :  {
-      return {
-        board: state.board = getEmptyBoard() /*do something with board */
-      };
-    }
-  }
-  throw Error('Unknown action: ', action.type);
-}
+// function boardReducerFunction(state, action) {
+//   switch (action.type) {
+//     case 'clicked_tile' :  {
+//       return {
+//         board: state.board = getEmptyBoard() /*do something with board */
+//       };
+//     }
+//   }
+//   throw Error('Unknown action: ', action.type);
+// }
 
 function Game(props) {
-	// const [board, setBoard] = useState(getEmptyBoard());
-  const [boardState, dispatchFunction] = useReducer(boardReducerFunction, {board: getEmptyBoard()});
-
-  function handleClickOnTile() {
-    dispatchFunction({
-      type: 'clicked_tile'
-    });
-  }
-
+	const [board, setBoard] = useState(getEmptyBoard());
   const [clickable, setClickable] = useState(true);
+  // const [boardState, dispatchFunction] = useReducer(boardReducerFunction, {board: getEmptyBoard()});
+
+  // function handleClickOnTile() {
+  //   dispatchFunction({
+  //     type: 'clicked_tile'
+  //   });
+  // }
+
+  
 
 	let winner = winningPlayer(board);
 	let strikeName = getStrikeThroughClassName(getWinningTiles(board));
@@ -34,10 +35,6 @@ function Game(props) {
 		strikeThroughOnCrossTile = <div className={strikeName}></div>;
 	}
 
-  
-  
-
-  
 	let rows = board.map((arr, i) => {
 		let columns = [];
 		for (let j = 0; j < arr.length; j++){
