@@ -1,11 +1,12 @@
 const ReactDOM = require('react-dom/client');
 const React = require('react');
-const { default: Game } = require('./Game.jsx');
+// const { default: Game } = require('./Game.jsx');
+const { default: Home } = require('./Home.jsx');
+// const { Game } = require('./Game.jsx');
 
 function initApplication() {
-    fetch('http://localhost:8001/new-game')
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(React.createElement(Game));
+    root.render(React.createElement(Home));
 }
 
 if (document.readyState === 'loading') {

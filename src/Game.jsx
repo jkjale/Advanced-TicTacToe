@@ -1,151 +1,118 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useReducer } from 'react';
 import './game.css';
 
+function boardReducerFunction(state, action) {
+  switch (action.type) {
+    case 'clicked_tile' :  {
+      return {
+        board: state.board = getEmptyBoard() /*do something with board */
+      };
+    }
+  }
+  throw Error('Unknown action: ', action.type);
+}
 
 function Game(props) {
-	// const [state, setState] = useState({
-	// 	board: getEmptyBoard(),
-	// 	player: 1
-	// });
+	// const [board, setBoard] = useState(getEmptyBoard());
+  const [boardState, dispatchFunction] = useReducer(boardReducerFunction, {board: getEmptyBoard()});
 
-	const [state, setState] = useState(getEmptyBoard());
-  // const [myPlayer, setPlayer] = useState(1);
-
-  let myPlayer = 1;
-
-	function updateStateOnClick(prevBoard, playerNum, rowId, colId) {
-		let newBoard = [];
-		for (let i = 0; i < 3; i++) {
-			let rowArr = [];
-			for (let j = 0; j < 3; j++) {
-				rowArr.push(prevBoard[i][j]);
-			}
-			newBoard.push(rowArr);
-		}
-		if (playerNum === 1 && newBoard[rowId][colId] === 0) {
-			newBoard[rowId][colId] = 1;
-      // setPlayer(2);
-			myPlayer = 2;
-		}
-		if (playerNum === 2 && newBoard[rowId][colId] === 0) {
-			newBoard[rowId][colId] = 2;
-      // setPlayer(1);
-			myPlayer = 1;
-		}
-		return newBoard;
-	}
-
-
-  function getStateFromServerEverySecond() {
-    fetch('http://localhost:8001/get-state')
-    .then((response) => response.json())
-    .then((data) => {
-      setState(data.state);
+  function handleClickOnTile() {
+    dispatchFunction({
+      type: 'clicked_tile'
     });
   }
 
-	useEffect(() => {
-		document.addEventListener('click', (pointerEvent) => {
-			let tileId = pointerEvent.target.id; // 'tile-0-1'
-			console.log('tileId: ', tileId);
-			if (tileId.substring(0, 4) === 'tile') {
-				let splitted = tileId.split('-');
-				let tileCoordinates = [parseInt(splitted[1]), parseInt(splitted[2])];
-				console.log('tileCoordinates: ', tileCoordinates);
-				console.log('myPlayer: ', myPlayer);
-				setState(prevState => {
-					let newState = updateStateOnClick(prevState, myPlayer, tileCoordinates[0], tileCoordinates[1]);
-					return newState;
-				});
-        fetch('http://localhost:8001/set-player?row=' + splitted[1] + '&col=' + splitted[2])
-        .then((response) => response.json())
-        .then((data) => {
-          console.log('dataaaaa:', data);
-        });
-			}
+  const [clickable, setClickable] = useState(true);
 
-      const interval = setInterval(() => {
-        getStateFromServerEverySecond();
-      }, 1000);
-
-      // return () => clearInterval(interval)
-
-		})
-	}, [])
-
-
-	// console.log('getWinningTiles: ', getWinningTiles(state));
-	// console.log('winningPlayer: ', winningPlayer(state));
-	// console.log('strikeName: ', strikeName)
-
-	let winner = winningPlayer(state);
-	let strikeName = getStrikeThroughClassName(getWinningTiles(state));
-	let onCircleTile;
-	let onCrossTile;
+	let winner = winningPlayer(board);
+	let strikeName = getStrikeThroughClassName(getWinningTiles(board));
+  let strikeThroughOnCircleTile;
+	let strikeThroughOnCrossTile;
 	if (winner === 1) {
-		onCircleTile = <div className={strikeName}></div>;
+		strikeThroughOnCircleTile = <div className={strikeName}></div>;
 	} else if (winner === 2) {
-		onCrossTile = <div className={strikeName}></div>;
+		strikeThroughOnCrossTile = <div className={strikeName}></div>;
 	}
-	let rows = state.map((arr, i) => {
-		let rows = [];
+
+  
+  
+
+  
+	let rows = board.map((arr, i) => {
+		let columns = [];
 		for (let j = 0; j < arr.length; j++){
-			rows.push(
-				<div className='tile' id={'tile-'+i+'-'+j} key={j}>
+			columns.push(
+				<div className='tile' id={`tile-${i}-${j}`} key={j} onClick={(event) => {
+          let parsedIdArr = event.target.id.split('-');
+          let rowId = parseInt(parsedIdArr[1]);
+          let colId = parseInt(parsedIdArr[2]);
+
+          if (clickable) {
+            setBoard((prevBoard) => {
+              let newBoard = getEmptyBoard();
+              for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                  newBoard[i][j] = prevBoard[i][j];
+                }
+              }
+              newBoard[rowId][colId] = 1;
+              return newBoard;
+            });
+            fetch(`http://localhost:8001/set-player?row=${rowId}&col=${colId}&id=${props.playerId}`);
+            setClickable(false);
+          }
+          console.log('clickable: ', clickable);
+
+          const intervalId = setInterval(() => {
+            fetch(`http://localhost:8001/get-state?id=${props.playerId}`)
+            .then((response) => response.json())
+            .then((data) => {
+              console.log('data: ', data);
+              if (data.player === 1) {
+                // make it clickable
+                setClickable(true);
+
+                // update board
+                setBoard((prevBoard) => {
+                  let newState = getEmptyBoard();
+                  for (let i = 0; i < data.state.length; i++) {
+                    for (let j = 0; j < data.state[i].length; j++) {
+                      newState[i][j] = data.state[i][j];
+                    }
+                  }
+                  return newState;
+                });
+                clearInterval(intervalId);
+              }
+            })
+          }, 1000)
+        }}>
 					{
-						(arr[j] === 1) ? <div className='circle'>{onCircleTile}</div>: (arr[j] === 2) ?  
-						<div><div className='cross1'></div><div className='cross2'></div>{onCrossTile}</div> : null
+						(arr[j] === 1) ? <div className='circle'>{strikeThroughOnCircleTile}</div> : 
+            (arr[j] === 2) ? <div><div className='cross1'></div><div className='cross2'></div>{strikeThroughOnCrossTile}</div> : null
 					}
 				</div>
 			)
 		}
 		return (
-			<div className='row' id={'row-'+i} key={i}>
-				{rows}
+			<div className='row' id={`row-${i}`} key={i}>
+				{columns}
 			</div>
 		);
 	});
 
-	
-	console.log('rendering.g...');
-  console.log('local state: ', state);
-
-
-  
-  function handleOnClickState() {
-    fetch('http://localhost:8001/get-state')
-    .then((response) => response.json())
-    .then((data) => {
-      setState(data.state);
-      let divBoard = document.getElementById('board');
-      while (myPlayer !== data.player) {
-        divBoard.style.pointerEvents = 'none';
-        myPlayer = myPlayer === 1 ? 2 : 1;
-      } 
-      console.log('server.state: ', data.state);
-      console.log('server.player: ', data.player);
-      console.log('local.player: ', myPlayer);
-    });
-  }
-
-  function handleOnClickNewGameButton() {
-    fetch('http://localhost:8001/new-game')
-    .then((response) => response.json())
-    .then((data) => {
-      console.log('fdsfas::: ', data);
-    });
-  }
-
  
+
+  console.log('props.playerId: ', props.playerId);
+
 	return (
-    <div id='wrapper'>
+    <div id='wrapper' myId>
       <div id='board'>
 			  {rows}
       </div>
       <div>{winner !== 0 ? 'Player ' + winner + ' wins!' : null}</div>
-      <div id='box' onClick={handleOnClickState} style={{width: '120px', height: '40px', backgroundColor: 'red'}}>Click me!</div>
-      <div id='showData'>{state}</div>
-      <button onClick={handleOnClickNewGameButton}>new game</button>
+      <div id='box' style={{width: '120px', height: '40px', backgroundColor: 'red'}}>Click me!</div>
+      <div id='showData'>{board}</div>
     </div>
 	);
 }
